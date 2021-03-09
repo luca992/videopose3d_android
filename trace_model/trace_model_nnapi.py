@@ -73,8 +73,8 @@ def make_videopose3d_nnapi(output_dir_path, quantize_mode):
     
     # Many NNAPI backends prefer NHWC tensors, so convert our input to channels_last,
     # and set the "nnapi_nhwc" attribute for the converter.
-    input_tensor = input_tensor.contiguous(memory_format=torch.channels_last)
-    input_tensor.nnapi_nhwc = True
+    #input_tensor = input_tensor.contiguous(memory_format=torch.channels_last)
+    #input_tensor.nnapi_nhwc = True
 
     # Trace the model.  NNAPI conversion only works with TorchScript models,
     # and traced models are more likely to convert successfully than scripted.

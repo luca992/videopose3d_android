@@ -174,7 +174,7 @@ class TemporalModel(nn.Module):
                 elif (j == 2*i + 1):
                     desired_bn_mod_2.append(list(mod))'''
 
-                
+
             for j, mod_conv in enumerate(self.layers_conv):
                 for k, mod_bn in enumerate(self.layers_bn):
                     if j==2*i and k==2*i:
@@ -204,8 +204,9 @@ class TemporalModel(nn.Module):
         x.contiguous(memory_format=torch.channels_last)
 
         sz = x.shape[:3]
-        x = x.view(x.shape[0], x.shape[1], -1)
-        x = x.permute(0, 2, 1)
+        x = x.reshape(x.shape[0], x.shape[1], -1)
+        x = torch.from_numpy(x.numpy().transpose(0, 2, 1))
+        #x = x.permute(0, 2, 1)
         
         x = self._forward_blocks(x)
         
