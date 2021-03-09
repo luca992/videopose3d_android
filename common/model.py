@@ -83,7 +83,7 @@ class TemporalModel(nn.Module):
             self.features.add_module('bn'+str(i)+'2', nn.BatchNorm1d(channels, momentum=0.1))'''
 
 
-            
+
             
             layers_conv.append(nn.Conv1d(channels, channels, filter_widths[i] if not dense else (2*self.pad[-1] + 1), dilation=next_dilation if not dense else 1, bias=False))
             layers_bn.append(nn.BatchNorm1d(channels, momentum=0.1))
@@ -161,7 +161,8 @@ class TemporalModel(nn.Module):
 
             res = x[:, :, pad + shift : x.shape[2] - pad + shift]
 
-
+            x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
+            x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
             '''
             for j, mod in enumerate(self.layers_conv):
                 if (j == 2*i):
@@ -175,17 +176,16 @@ class TemporalModel(nn.Module):
                     desired_bn_mod_2.append(list(mod))'''
 
                 
-            for j, mod_conv in enumerate(self.layers_conv):
-                for k, mod_bn in enumerate(self.layers_bn):
-                    if j==2*i and k==2*i:
-                        x = self.drop(self.relu(mod_bn(mod_conv(x))))
-                    elif j==2*i +1 and k==2*i + 1:
-                        x = res + self.drop(self.relu(mod_bn(mod_conv(x))))
+#            for j, mod_conv in enumerate(self.layers_conv):
+#                for k, mod_bn in enumerate(self.layers_bn):
+#                    if j==2*i and k==2*i:
+#                        x = self.drop(self.relu(mod_bn(mod_conv(x))))
+#                    elif j==2*i +1 and k==2*i + 1:
+#                        x = res + self.drop(self.relu(mod_bn(mod_conv(x))))"""
 
 
 
-            #x = self.drop(self.relu(self.layers_bn[2*i](self.layers_conv[2*i](x))))
-            #x = res + self.drop(self.relu(self.layers_bn[2*i + 1](self.layers_conv[2*i + 1](x))))
+
 
 
             
@@ -201,18 +201,16 @@ class TemporalModel(nn.Module):
         assert x.shape[-2] == self.num_joints_in
         assert x.shape[-1] == self.in_features
         
-        x.contiguous(memory_format=torch.channels_last)
-
-        sz = x.shape[:3]
-        x = x.view(x.shape[0], x.shape[1], -1)
-        x = x.permute(0, 2, 1)
-        
+        # x.contiguous(memory_format=torch.channels_last)
+        sz = x.numpy().shape[:3]
+        x = x.view(sz[0], sz[1], -1)
+        #x = x.permute(0, 2, 1)
+        x = torch.from_numpy(x.numpy().transpose(0, 2, 1))
         x = self._forward_blocks(x)
-        
-        x = x.permute(0, 2, 1)
-        x = x.view(sz[0], -1, self.num_joints_out, 3)
+        x = torch.from_numpy(x.numpy().transpose(0, 2, 1))
+        #x = x.permute(0, 2, 1)
+        x = x.reshape(sz[0], -1, self.num_joints_out, 3)
 
-        
         return x
 
 
@@ -285,19 +283,19 @@ class TemporalModelOptimized1f(TemporalModel):
         
         layers_conv = []
         layers_bn = []
-        
+
         self.causal_shift = [ (filter_widths[0] // 2) if causal else 0 ]
         next_dilation = filter_widths[0]
         for i in range(1, len(filter_widths)):
             self.pad.append((filter_widths[i] - 1)*next_dilation // 2)
             self.causal_shift.append((filter_widths[i]//2) if causal else 0)
-            
+
             layers_conv.append(nn.Conv1d(channels, channels, filter_widths[i], stride=filter_widths[i], bias=False))
             layers_bn.append(nn.BatchNorm1d(channels, momentum=0.1))
             layers_conv.append(nn.Conv1d(channels, channels, 1, dilation=1, bias=False))
             layers_bn.append(nn.BatchNorm1d(channels, momentum=0.1))
             next_dilation *= filter_widths[i]
-            
+
         self.layers_conv = nn.ModuleList(layers_conv)
         self.layers_bn = nn.ModuleList(layers_bn)
         
